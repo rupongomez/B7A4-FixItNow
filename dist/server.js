@@ -306,6 +306,9 @@ var prisma = new PrismaClient({ adapter });
 // src/modules/user/user.service.ts
 var registerUserIntoDb = async (payload) => {
   const { name, location, email, password, phone, role, profileImage } = payload;
+  if (!name && !location && !email && !password && !phone && !role) {
+    throw new Error("Required field can not be empty");
+  }
   const isExist = await prisma.user.findUnique({
     where: {
       email
@@ -333,7 +336,8 @@ var registerUserIntoDb = async (payload) => {
         phone,
         role: roleToUpperCase,
         profileImage
-      }
+      },
+      omit: { password: true }
     });
   }
   if (roleToUpperCase === "TECHNICIAN") {
@@ -346,7 +350,8 @@ var registerUserIntoDb = async (payload) => {
         phone,
         role: roleToUpperCase,
         profileImage
-      }
+      },
+      omit: { password: true }
     });
   }
   return user;
@@ -495,6 +500,9 @@ import { Router as Router2 } from "express";
 import bcrypt2 from "bcryptjs";
 var loginUserIntoDb = async (payload) => {
   const { email, password } = payload;
+  if (!email && !password) {
+    throw new Error("Credentials can not be empty");
+  }
   const user = await prisma.user.findUnique({
     where: { email }
   });
@@ -1382,6 +1390,9 @@ var getAllBookings = async () => {
 };
 var createCategoryIntoDb = async (payload) => {
   const { name, description } = payload;
+  if (!name && !description) {
+    throw new Error("Required field can not be empty");
+  }
   const createCategory2 = await prisma.category.create({
     data: {
       name,

@@ -7,7 +7,7 @@ import { SignOptions } from "jsonwebtoken";
 const loginUserIntoDb = async (payload: IUser) => {
   const { email, password } = payload;
 
-  if (email && password) {
+  if (!email && !password) {
     throw new Error("Credentials can not be empty");
   }
 

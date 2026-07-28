@@ -42,6 +42,7 @@ const registerUserIntoDb = async (payload: RegisterUserPayload) => {
         role: roleToUpperCase,
         profileImage,
       },
+      omit: { password: true },
     });
   }
 
@@ -56,6 +57,7 @@ const registerUserIntoDb = async (payload: RegisterUserPayload) => {
         role: roleToUpperCase,
         profileImage,
       },
+      omit: { password: true },
     });
   }
   return user;
