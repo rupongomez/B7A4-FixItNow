@@ -47,14 +47,21 @@ const createTechnicianProfileIntoDb = async (
 };
 
 const getAllTechnicianFromDb = async (query: ITechnicianQuery) => {
-  const limit = query.limit ? Number(query.limit) : 10;
+  const limit = query.limit ? Number(query.limit) : 6;
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
   const sortBy = query.sortBy ? query.sortBy : "createdAt";
   const sortOrder = query.sortOrder ? query.sortOrder : "desc";
 
   const andConditions: TechnicianProfileWhereInput[] = [];
-
+  if (query.searchTerms) {
+    andConditions.push({
+      OR: [
+        { bio: { contains: query.searchTerms, mode: "insensitive" } },
+        { location: { contains: query.searchTerms, mode: "insensitive" } },
+      ],
+    });
+  }
   if (query.minAverageRating) {
     andConditions.push({
       averageRating: { gte: Number(query.minAverageRating) },
@@ -90,7 +97,11 @@ const getAllTechnicianFromDb = async (query: ITechnicianQuery) => {
     where: {
       AND: andConditions,
     },
-    include: { user: true },
+    include: {
+      user: {
+        omit: { password: true },
+      },
+    },
     take: limit,
     skip: skip,
 
@@ -99,13 +110,15 @@ const getAllTechnicianFromDb = async (query: ITechnicianQuery) => {
     },
   });
 
-  return result;
+  const totalTechnicians = await prisma.technicianProfile.count();
+
+  return { result, totalTechnicians };
 };
 
-const getTechnicianByIdFromDb = async (technicianId: string) => {
+const getTechnicianByIdFromDb = async (userId: string) => {
   const result = await prisma.technicianProfile.findUnique({
     where: {
-      id: technicianId,
+      userId,
     },
     include: {
       reviews: true,

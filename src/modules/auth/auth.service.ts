@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../../lib/prisma";
 import { jwtUtils } from "../../utils/jwt";
 import config from "../../config";
-import { SignOptions } from "jsonwebtoken";
+import { JwtPayload, SignOptions } from "jsonwebtoken";
 
 const loginUserIntoDb = async (payload: IUser) => {
   const { email, password } = payload;
@@ -51,6 +51,37 @@ const loginUserIntoDb = async (payload: IUser) => {
   return { accessToken, refreshToken };
 };
 
+const regenerateAccessToken = async (refreshToken: string) => {
+  const decoded = jwtUtils.verifyToken(
+    refreshToken,
+    config.jwt_refresh_secret as string,
+  ) as JwtPayload;
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: decoded.data.id as string },
+  });
+
+  if (!user) {
+    throw new Error("User not Found! Please register to continue");
+  }
+
+  const jwtPayload = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions,
+  );
+
+  return { accessToken };
+};
+
 export const authService = {
   loginUserIntoDb,
+  regenerateAccessToken,
 };

@@ -26,7 +26,7 @@ const getMyProfile = catchAsync(
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.OK,
-      message: "Profile retreieved successfully",
+      message: "Profile retrieved successfully",
       data: getMyProfile,
     });
   },

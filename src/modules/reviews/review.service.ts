@@ -60,6 +60,17 @@ const createReviewIntoDB = async (userId: string, payload: IReview) => {
   return transactionResult;
 };
 
+const getAllReviews = async (bookingId: string) => {
+  const reviews = await prisma.review.findMany({
+    where: {
+      bookingId,
+    },
+  });
+
+  return reviews;
+};
+
 export const reviewService = {
   createReviewIntoDB,
+  getAllReviews,
 };

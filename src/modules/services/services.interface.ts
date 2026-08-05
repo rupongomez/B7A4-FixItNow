@@ -21,4 +21,6 @@ export interface IServiceQuery extends ServiceWhereInput {
   sortOrder?: string;
   sortBy?: string;
   type?: string;
+  minPrice?: string;
+  searchTerms?: string;
 }

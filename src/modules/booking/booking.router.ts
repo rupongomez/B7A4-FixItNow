@@ -13,4 +13,10 @@ router.get(
   bookingController.getBookingById,
 );
 
+router.patch(
+  "/update-status/:bookingId",
+  auth(Role.CUSTOMER),
+  bookingController.updateBookingStatus,
+);
+
 export const bookingRouter = router;

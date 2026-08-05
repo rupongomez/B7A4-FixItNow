@@ -1,9 +1,55 @@
+import { UserWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
-import { ICategory, IStatus } from "./admin.interface";
+import { ICategory, IQuery, IStatus } from "./admin.interface";
 
-const getAllUsersFromDb = async () => {
-  const allUsers = await prisma.user.findMany();
-  return allUsers;
+const getAllUsersFromDb = async (query: IQuery) => {
+  const limit = query.limit ? Number(query.limit) : 5;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const andCondition: UserWhereInput[] = [];
+
+  if (query.searchTerm) {
+    andCondition.push({
+      OR: [
+        {
+          email: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
+        },
+        {
+          name: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
+        },
+        {
+          phone: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
+        },
+        {
+          location: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
+  }
+
+  const allUsers = await prisma.user.findMany({
+    where: {
+      AND: andCondition,
+    },
+    skip,
+    take: limit,
+    omit: { password: true },
+  });
+
+  const totalUserCount = await prisma.user.count();
+  return { allUsers, totalUserCount };
 };
 
 const updateUserStatusIntoDb = async (payload: IStatus, userId: string) => {
@@ -11,7 +57,7 @@ const updateUserStatusIntoDb = async (payload: IStatus, userId: string) => {
   const updateStatus = status.toUpperCase();
 
   if (updateStatus !== "ACTIVE" && updateStatus !== "BANNED") {
-    throw new Error("You can only chance status to active or banned");
+    throw new Error("You can only change status to active or banned");
   }
   const updateUser = await prisma.user.update({
     where: {

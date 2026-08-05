@@ -128,9 +128,19 @@ const getPaymentByIdFromDB = async (paymentId: string) => {
   return getPaymentDetails;
 };
 
+const getAllPaymentsByCustomerId = async (customerId: string) => {
+  const payments = await prisma.payment.findMany({
+    where: {
+      customerId,
+    },
+  });
+
+  return payments;
+};
 export const paymentService = {
   createCheckOutSessionIntoDB,
   handleWebhook,
   getPaymentsFromDb,
   getPaymentByIdFromDB,
+  getAllPaymentsByCustomerId,
 };

@@ -1,4 +1,4 @@
-import { Availability } from "../../../generated/prisma/client";
+import { Availability, BookingStatus } from "../../../generated/prisma/client";
 
 export interface IBooking {
   serviceId: string;
@@ -9,4 +9,8 @@ export interface IBooking {
   note: string;
   timeSlotId: string;
   bookingTime: string;
+}
+
+export interface IBookingStatus {
+  status: BookingStatus;
 }

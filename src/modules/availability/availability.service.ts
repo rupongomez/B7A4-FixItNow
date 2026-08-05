@@ -53,7 +53,24 @@ const updateAvailabilityIntoDb = async (payload: IAvailability, id: string) => {
   return updateAvailability;
 };
 
+const getAvailabilityById = async (id: string) => {
+  if (!id) {
+    throw new Error("Technician profile id is required");
+  }
+
+  const getTechnicianProfileId =
+    await prisma.technicianProfile.findUniqueOrThrow({
+      where: { userId: id },
+    });
+  const getAvailability = await prisma.availability.findMany({
+    where: { technicianProfileId: getTechnicianProfileId.id },
+  });
+
+  return getAvailability;
+};
+
 export const availabilityService = {
   createAvailabilityIntoDb,
   updateAvailabilityIntoDb,
+  getAvailabilityById,
 };

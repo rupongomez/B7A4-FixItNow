@@ -17,4 +17,6 @@ router.put(
   availabilityController.updateAvailability,
 );
 
+router.get("/:id", availabilityController.getAvailabilityById);
+
 export const availabilityRouter = router;

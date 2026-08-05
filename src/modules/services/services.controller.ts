@@ -30,7 +30,39 @@ const getAllServices = catchAsync(
   },
 );
 
+const getAllServicesForSingleTechnician = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+    const result =
+      await servicesService.getAllServicesForSingleTechnicianFromDB(
+        id as string,
+      );
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Service offered by this Technician retrieved successfully",
+      data: result,
+    });
+  },
+);
+
+const getServiceById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+    const result = await servicesService.getServiceByIdFromDB(id as string);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Service retrieved successfully",
+      data: result,
+    });
+  },
+);
+
 export const serviceController = {
   getAllServices,
   createService,
+  getAllServicesForSingleTechnician,
+  getServiceById,
 };

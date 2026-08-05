@@ -49,8 +49,29 @@ const getBookingById = catchAsync(
   },
 );
 
+const updateBookingStatus = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const customerId = req.user?.id as string;
+    const bookingId = req.params.bookingId as string;
+    const status = req.body.status;
+    console.log(status, "from contr");
+    const result = await bookingService.updateBookingStatusInDb(
+      bookingId,
+      status,
+      customerId,
+    );
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Booking status updated",
+      data: result,
+    });
+  },
+);
 export const bookingController = {
   createBooking,
   getUsersBooking,
   getBookingById,
+  updateBookingStatus,
 };

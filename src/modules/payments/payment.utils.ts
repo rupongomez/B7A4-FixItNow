@@ -22,9 +22,7 @@ export const handleCheckOutCompleted = async (
   const amount = new Prisma.Decimal(amountInCents / 100);
 
   await prisma.payment.upsert({
-    where: {
-      transactionId,
-    },
+    where: { bookingId },
     create: {
       customerId: userId,
       stripeCustomerId,
@@ -37,6 +35,14 @@ export const handleCheckOutCompleted = async (
       stripeCustomerId,
       status: "COMPLETED",
       amount,
+      transactionId,
+    },
+  });
+
+  await prisma.booking.update({
+    where: { id: bookingId },
+    data: {
+      status: "PAID",
     },
   });
 };

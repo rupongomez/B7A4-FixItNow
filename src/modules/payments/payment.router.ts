@@ -17,4 +17,10 @@ router.get("/", auth(Role.CUSTOMER), paymentController.getPayment);
 
 router.get("/details/:id", paymentController.getPaymentDetails);
 
+router.get(
+  "/history",
+  auth(Role.CUSTOMER),
+  paymentController.getPaymentHistory,
+);
+
 export const paymentRouter = router;

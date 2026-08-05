@@ -50,17 +50,25 @@ const createServiceInToDB = async (payload: IService) => {
 };
 
 const getAllServicesFromDb = async (query: IServiceQuery) => {
-  const limit = query.limit ? Number(query.limit) : 10;
+  const limit = query.limit ? Number(query.limit) : 5;
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
   const sortBy = query.sortBy ? query.sortBy : "createdAt";
   const sortOrder = query.sortOrder ? query.sortOrder : "desc";
 
   const andConditions: ServiceWhereInput[] = [];
-
-  if (query.price) {
+  if (query.searchTerms) {
     andConditions.push({
-      price: Number(query.price),
+      OR: [
+        { title: { contains: query.searchTerms, mode: "insensitive" } },
+        { description: { contains: query.searchTerms, mode: "insensitive" } },
+        { location: { contains: query.searchTerms, mode: "insensitive" } },
+      ],
+    });
+  }
+  if (query.minPrice) {
+    andConditions.push({
+      price: { gte: Number(query.minPrice) },
     });
   }
 
@@ -100,9 +108,41 @@ const getAllServicesFromDb = async (query: IServiceQuery) => {
     },
   });
 
+  const totalServiceCount = await prisma.service.count();
+  return { result, totalServiceCount };
+};
+
+const getAllServicesForSingleTechnicianFromDB = async (userId: string) => {
+  const getTechnician = await prisma.technicianProfile.findUniqueOrThrow({
+    where: {
+      userId,
+    },
+  });
+
+  const technicianId = getTechnician.id;
+
+  const result = await prisma.service.findMany({
+    where: {
+      technicianProfileId: technicianId,
+    },
+    include: { technicianProfile: true },
+  });
+
   return result;
 };
+
+const getServiceByIdFromDB = async (serviceId: string) => {
+  const result = await prisma.service.findUniqueOrThrow({
+    where: {
+      id: serviceId,
+    },
+  });
+  return result;
+};
+
 export const servicesService = {
   getAllServicesFromDb,
   createServiceInToDB,
+  getAllServicesForSingleTechnicianFromDB,
+  getServiceByIdFromDB,
 };

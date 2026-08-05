@@ -29,7 +29,7 @@ const getAllTechnician = catchAsync(
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.OK,
-      message: "Technician Profile Created Successfully",
+      message: "All Technician Retrieved ",
       data: result,
     });
   },
@@ -103,6 +103,7 @@ const updateBookingStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const bookingId = req.params.id as string;
     const payload = req.body;
+
     const result = await technicianService.updateBookingStatusInDb(
       bookingId,
       payload,

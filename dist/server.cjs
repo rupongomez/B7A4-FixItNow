@@ -413,7 +413,7 @@ var getMyProfile = catchAsync(
     sendResponse(res, {
       success: true,
       statusCode: import_http_status.default.OK,
-      message: "Profile retreieved successfully",
+      message: "Profile retrieved successfully",
       data: getMyProfile2
     });
   }
@@ -557,8 +557,33 @@ var loginUserIntoDb = async (payload) => {
   );
   return { accessToken, refreshToken };
 };
+var regenerateAccessToken = async (refreshToken) => {
+  const decoded = jwtUtils.verifyToken(
+    refreshToken,
+    config_default.jwt_refresh_secret
+  );
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: decoded.data.id }
+  });
+  if (!user) {
+    throw new Error("User not Found! Please register to continue");
+  }
+  const jwtPayload = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role
+  };
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config_default.jwt_access_secret,
+    config_default.jwt_access_expires_in
+  );
+  return { accessToken };
+};
 var authService = {
-  loginUserIntoDb
+  loginUserIntoDb,
+  regenerateAccessToken
 };
 
 // src/modules/auth/auth.controller.ts
@@ -587,13 +612,39 @@ var loginUser = catchAsync(
     });
   }
 );
+var getNewAccessToken = catchAsync(
+  async (req, res, next) => {
+    const { refreshToken } = req.cookies;
+    if (!refreshToken) {
+      throw new Error("Refresh token not found. Please login again");
+    }
+    const { accessToken } = await authService.regenerateAccessToken(refreshToken);
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "none",
+      maxAge: 1e3 * 60 * 60 * 24
+    });
+    sendResponse(res, {
+      success: true,
+      statusCode: import_http_status3.default.OK,
+      message: "New access token generated successfully",
+      data: { accessToken }
+    });
+  }
+);
 var authController = {
-  loginUser
+  loginUser,
+  getNewAccessToken
 };
 
 // src/modules/auth/auth.route.ts
 var router2 = (0, import_express2.Router)();
 router2.post("/login", authController.loginUser);
+router2.get(
+  "/refresh-token",
+  authController.getNewAccessToken
+);
 var authRouter = router2;
 
 // src/modules/technician/technician.route.ts
@@ -634,12 +685,20 @@ var createTechnicianProfileIntoDb = async (payload, userId) => {
   return transactionResult;
 };
 var getAllTechnicianFromDb = async (query) => {
-  const limit = query.limit ? Number(query.limit) : 10;
+  const limit = query.limit ? Number(query.limit) : 6;
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
   const sortBy = query.sortBy ? query.sortBy : "createdAt";
   const sortOrder = query.sortOrder ? query.sortOrder : "desc";
   const andConditions = [];
+  if (query.searchTerms) {
+    andConditions.push({
+      OR: [
+        { bio: { contains: query.searchTerms, mode: "insensitive" } },
+        { location: { contains: query.searchTerms, mode: "insensitive" } }
+      ]
+    });
+  }
   if (query.minAverageRating) {
     andConditions.push({
       averageRating: { gte: Number(query.minAverageRating) }
@@ -670,19 +729,24 @@ var getAllTechnicianFromDb = async (query) => {
     where: {
       AND: andConditions
     },
-    include: { user: true },
+    include: {
+      user: {
+        omit: { password: true }
+      }
+    },
     take: limit,
     skip,
     orderBy: {
       [sortBy]: sortOrder
     }
   });
-  return result;
+  const totalTechnicians = await prisma.technicianProfile.count();
+  return { result, totalTechnicians };
 };
-var getTechnicianByIdFromDb = async (technicianId) => {
+var getTechnicianByIdFromDb = async (userId) => {
   const result = await prisma.technicianProfile.findUnique({
     where: {
-      id: technicianId
+      userId
     },
     include: {
       reviews: true
@@ -799,7 +863,7 @@ var getAllTechnician = catchAsync(
     sendResponse(res, {
       success: true,
       statusCode: import_http_status4.default.OK,
-      message: "Technician Profile Created Successfully",
+      message: "All Technician Retrieved ",
       data: result
     });
   }
@@ -966,15 +1030,24 @@ var createServiceInToDB = async (payload) => {
   return createService2;
 };
 var getAllServicesFromDb = async (query) => {
-  const limit = query.limit ? Number(query.limit) : 10;
+  const limit = query.limit ? Number(query.limit) : 5;
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
   const sortBy = query.sortBy ? query.sortBy : "createdAt";
   const sortOrder = query.sortOrder ? query.sortOrder : "desc";
   const andConditions = [];
-  if (query.price) {
+  if (query.searchTerms) {
     andConditions.push({
-      price: Number(query.price)
+      OR: [
+        { title: { contains: query.searchTerms, mode: "insensitive" } },
+        { description: { contains: query.searchTerms, mode: "insensitive" } },
+        { location: { contains: query.searchTerms, mode: "insensitive" } }
+      ]
+    });
+  }
+  if (query.minPrice) {
+    andConditions.push({
+      price: { gte: Number(query.minPrice) }
     });
   }
   if (query.maxPrice) {
@@ -1007,11 +1080,37 @@ var getAllServicesFromDb = async (query) => {
       [sortBy]: sortOrder
     }
   });
+  const totalServiceCount = await prisma.service.count();
+  return { result, totalServiceCount };
+};
+var getAllServicesForSingleTechnicianFromDB = async (userId) => {
+  const getTechnician = await prisma.technicianProfile.findUniqueOrThrow({
+    where: {
+      userId
+    }
+  });
+  const technicianId = getTechnician.id;
+  const result = await prisma.service.findMany({
+    where: {
+      technicianProfileId: technicianId
+    },
+    include: { technicianProfile: true }
+  });
+  return result;
+};
+var getServiceByIdFromDB = async (serviceId) => {
+  const result = await prisma.service.findUniqueOrThrow({
+    where: {
+      id: serviceId
+    }
+  });
   return result;
 };
 var servicesService = {
   getAllServicesFromDb,
-  createServiceInToDB
+  createServiceInToDB,
+  getAllServicesForSingleTechnicianFromDB,
+  getServiceByIdFromDB
 };
 
 // src/modules/services/services.controller.ts
@@ -1040,15 +1139,48 @@ var getAllServices = catchAsync(
     });
   }
 );
+var getAllServicesForSingleTechnician = catchAsync(
+  async (req, res, next) => {
+    const id = req.params.id;
+    const result = await servicesService.getAllServicesForSingleTechnicianFromDB(
+      id
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: import_http_status5.default.OK,
+      message: "Service offered by this Technician retrieved successfully",
+      data: result
+    });
+  }
+);
+var getServiceById = catchAsync(
+  async (req, res, next) => {
+    const id = req.params.id;
+    const result = await servicesService.getServiceByIdFromDB(id);
+    sendResponse(res, {
+      success: true,
+      statusCode: import_http_status5.default.OK,
+      message: "Service retrieved successfully",
+      data: result
+    });
+  }
+);
 var serviceController = {
   getAllServices,
-  createService
+  createService,
+  getAllServicesForSingleTechnician,
+  getServiceById
 };
 
 // src/modules/services/services.route.ts
 var router4 = (0, import_express4.Router)();
 router4.post("/", auth(Role.TECHNICIAN), serviceController.createService);
 router4.get("/", serviceController.getAllServices);
+router4.get("/:id", serviceController.getAllServicesForSingleTechnician);
+router4.get(
+  "/details/:id",
+  serviceController.getServiceById
+);
 var serviceRouter = router4;
 
 // src/modules/availability/availability.route.ts
@@ -1100,9 +1232,22 @@ var updateAvailabilityIntoDb = async (payload, id) => {
   });
   return updateAvailability2;
 };
+var getAvailabilityById = async (id) => {
+  if (!id) {
+    throw new Error("Technician profile id is required");
+  }
+  const getTechnicianProfileId = await prisma.technicianProfile.findUniqueOrThrow({
+    where: { userId: id }
+  });
+  const getAvailability = await prisma.availability.findMany({
+    where: { technicianProfileId: getTechnicianProfileId.id }
+  });
+  return getAvailability;
+};
 var availabilityService = {
   createAvailabilityIntoDb,
-  updateAvailabilityIntoDb
+  updateAvailabilityIntoDb,
+  getAvailabilityById
 };
 
 // src/modules/availability/availability.controller.ts
@@ -1138,9 +1283,22 @@ var updateAvailability = catchAsync(
     });
   }
 );
+var getAvailabilityById2 = catchAsync(
+  async (req, res, next) => {
+    const id = req.params.id;
+    const result = await availabilityService.getAvailabilityById(id);
+    sendResponse(res, {
+      success: true,
+      statusCode: import_http_status6.default.OK,
+      message: "Availability fetched successfully",
+      data: result
+    });
+  }
+);
 var availabilityController = {
   createAvailability,
-  updateAvailability
+  updateAvailability,
+  getAvailabilityById: getAvailabilityById2
 };
 
 // src/modules/availability/availability.route.ts
@@ -1155,6 +1313,7 @@ router5.put(
   auth(Role.TECHNICIAN),
   availabilityController.updateAvailability
 );
+router5.get("/:id", availabilityController.getAvailabilityById);
 var availabilityRouter = router5;
 
 // src/middlewares/notFound.ts
@@ -1235,10 +1394,23 @@ var getBookingByIdFromDb = async (bookingId) => {
   });
   return bookingData;
 };
+var updateBookingStatusInDb2 = async (bookingId, status, customerId) => {
+  const updateBookingStatus3 = await prisma.booking.update({
+    where: {
+      id: bookingId,
+      customerId
+    },
+    data: {
+      status
+    }
+  });
+  return updateBookingStatus3;
+};
 var bookingService = {
   createBookingIntoDb,
   getUsersBookingFromDb,
-  getBookingByIdFromDb
+  getBookingByIdFromDb,
+  updateBookingStatusInDb: updateBookingStatusInDb2
 };
 
 // src/modules/booking/booking.controller.ts
@@ -1283,10 +1455,30 @@ var getBookingById = catchAsync(
     });
   }
 );
+var updateBookingStatus2 = catchAsync(
+  async (req, res, next) => {
+    const customerId = req.user?.id;
+    const bookingId = req.params.bookingId;
+    const status = req.body.status;
+    console.log(status, "from contr");
+    const result = await bookingService.updateBookingStatusInDb(
+      bookingId,
+      status,
+      customerId
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: import_http_status8.default.OK,
+      message: "Booking status updated",
+      data: result
+    });
+  }
+);
 var bookingController = {
   createBooking,
   getUsersBooking,
-  getBookingById
+  getBookingById,
+  updateBookingStatus: updateBookingStatus2
 };
 
 // src/modules/booking/booking.router.ts
@@ -1297,6 +1489,11 @@ router6.get(
   "/details/:id",
   auth(Role.ADMIN, Role.TECHNICIAN, Role.CUSTOMER),
   bookingController.getBookingById
+);
+router6.patch(
+  "/update-status/:bookingId",
+  auth(Role.CUSTOMER),
+  bookingController.updateBookingStatus
 );
 var bookingRouter = router6;
 
@@ -1355,8 +1552,17 @@ var createReviewIntoDB = async (userId, payload) => {
   });
   return transactionResult;
 };
+var getAllReviews = async (bookingId) => {
+  const reviews = await prisma.review.findMany({
+    where: {
+      bookingId
+    }
+  });
+  return reviews;
+};
 var reviewService = {
-  createReviewIntoDB
+  createReviewIntoDB,
+  getAllReviews
 };
 
 // src/modules/reviews/review.controller.ts
@@ -1373,13 +1579,27 @@ var createReview = catchAsync(
     });
   }
 );
+var getReviewGivenByCustomer = catchAsync(
+  async (req, res, next) => {
+    const bookingId = req.params.bookingId;
+    const result = await reviewService.getAllReviews(bookingId);
+    sendResponse(res, {
+      success: true,
+      statusCode: import_http_status9.default.OK,
+      message: "Review posted successfully",
+      data: result
+    });
+  }
+);
 var reviewController = {
-  createReview
+  createReview,
+  getReviewGivenByCustomer
 };
 
 // src/modules/reviews/review.route.ts
 var router7 = (0, import_express7.Router)();
 router7.post("/", auth(Role.CUSTOMER), reviewController.createReview);
+router7.get("/:bookingId", reviewController.getReviewGivenByCustomer);
 var reviewRouter = router7;
 
 // src/modules/admin/admin.route.ts
@@ -1389,15 +1609,57 @@ var import_express8 = require("express");
 var import_http_status10 = __toESM(require("http-status"), 1);
 
 // src/modules/admin/admin.service.ts
-var getAllUsersFromDb = async () => {
-  const allUsers = await prisma.user.findMany();
-  return allUsers;
+var getAllUsersFromDb = async (query) => {
+  const limit = query.limit ? Number(query.limit) : 5;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const andCondition = [];
+  if (query.searchTerm) {
+    andCondition.push({
+      OR: [
+        {
+          email: {
+            contains: query.searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          name: {
+            contains: query.searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          phone: {
+            contains: query.searchTerm,
+            mode: "insensitive"
+          }
+        },
+        {
+          location: {
+            contains: query.searchTerm,
+            mode: "insensitive"
+          }
+        }
+      ]
+    });
+  }
+  const allUsers = await prisma.user.findMany({
+    where: {
+      AND: andCondition
+    },
+    skip,
+    take: limit,
+    omit: { password: true }
+  });
+  const totalUserCount = await prisma.user.count();
+  return { allUsers, totalUserCount };
 };
 var updateUserStatusIntoDb = async (payload, userId) => {
   const { status } = payload;
   const updateStatus = status.toUpperCase();
   if (updateStatus !== "ACTIVE" && updateStatus !== "BANNED") {
-    throw new Error("You can only chance status to active or banned");
+    throw new Error("You can only change status to active or banned");
   }
   const updateUser = await prisma.user.update({
     where: {
@@ -1439,7 +1701,9 @@ var adminService = {
 // src/modules/admin/admin.controller.ts
 var getAllUsers = catchAsync(
   async (req, res, next) => {
-    const result = await adminService.getAllUsersFromDb();
+    const query = req.query;
+    console.log(query, "qury");
+    const result = await adminService.getAllUsersFromDb(query);
     sendResponse(res, {
       success: true,
       statusCode: import_http_status10.default.OK,
@@ -1533,9 +1797,7 @@ var handleCheckOutCompleted = async (session) => {
   if (!amountInCents) return;
   const amount = new prismaNamespace_exports.Decimal(amountInCents / 100);
   await prisma.payment.upsert({
-    where: {
-      transactionId
-    },
+    where: { bookingId },
     create: {
       customerId: userId,
       stripeCustomerId,
@@ -1547,7 +1809,14 @@ var handleCheckOutCompleted = async (session) => {
     update: {
       stripeCustomerId,
       status: "COMPLETED",
-      amount
+      amount,
+      transactionId
+    }
+  });
+  await prisma.booking.update({
+    where: { id: bookingId },
+    data: {
+      status: "PAID"
     }
   });
 };
@@ -1656,11 +1925,20 @@ var getPaymentByIdFromDB = async (paymentId) => {
   });
   return getPaymentDetails2;
 };
+var getAllPaymentsByCustomerId = async (customerId) => {
+  const payments = await prisma.payment.findMany({
+    where: {
+      customerId
+    }
+  });
+  return payments;
+};
 var paymentService = {
   createCheckOutSessionIntoDB,
   handleWebhook,
   getPaymentsFromDb,
-  getPaymentByIdFromDB
+  getPaymentByIdFromDB,
+  getAllPaymentsByCustomerId
 };
 
 // src/modules/payments/payment.controller.ts
@@ -1718,11 +1996,24 @@ var getPaymentDetails = catchAsync(
     });
   }
 );
+var getPaymentHistory = catchAsync(
+  async (req, res, next) => {
+    const customerId = req.user?.id;
+    const result = await paymentService.getAllPaymentsByCustomerId(customerId);
+    sendResponse(res, {
+      success: true,
+      statusCode: import_http_status11.default.OK,
+      message: "Payment history retrieved successfully",
+      data: result
+    });
+  }
+);
 var paymentController = {
   createCheckOutSession,
   handleWebhook: handleWebhook2,
   getPayment,
-  getPaymentDetails
+  getPaymentDetails,
+  getPaymentHistory
 };
 
 // src/modules/payments/payment.router.ts
@@ -1735,6 +2026,11 @@ router9.post(
 router9.post("/webhook", paymentController.handleWebhook);
 router9.get("/", auth(Role.CUSTOMER), paymentController.getPayment);
 router9.get("/details/:id", paymentController.getPaymentDetails);
+router9.get(
+  "/history",
+  auth(Role.CUSTOMER),
+  paymentController.getPaymentHistory
+);
 var paymentRouter = router9;
 
 // src/app.ts

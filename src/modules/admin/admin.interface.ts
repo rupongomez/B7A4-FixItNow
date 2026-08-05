@@ -8,3 +8,11 @@ export interface ICategory {
 export interface IStatus {
   status: Status;
 }
+
+export interface IQuery {
+  limit?: number;
+  page?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  searchTerm?: string;
+}

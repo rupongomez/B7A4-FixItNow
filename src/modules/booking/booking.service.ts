@@ -1,3 +1,4 @@
+import { BookingStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { IBooking } from "./booking.interface";
 
@@ -71,8 +72,27 @@ const getBookingByIdFromDb = async (bookingId: string) => {
   return bookingData;
 };
 
+const updateBookingStatusInDb = async (
+  bookingId: string,
+  status: string,
+  customerId: string,
+) => {
+  const updateBookingStatus = await prisma.booking.update({
+    where: {
+      id: bookingId,
+      customerId,
+    },
+    data: {
+      status: status as BookingStatus,
+    },
+  });
+
+  return updateBookingStatus;
+};
+
 export const bookingService = {
   createBookingIntoDb,
   getUsersBookingFromDb,
   getBookingByIdFromDb,
+  updateBookingStatusInDb,
 };

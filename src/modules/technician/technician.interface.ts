@@ -22,6 +22,7 @@ export interface ITechnicianQuery {
   minCompletedJobs?: number;
   location?: string;
   isAvailable?: boolean;
+  searchTerms?: string;
 }
 
 export interface IStatus {

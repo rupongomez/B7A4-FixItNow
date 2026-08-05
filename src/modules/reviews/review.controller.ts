@@ -18,6 +18,21 @@ const createReview = catchAsync(
   },
 );
 
+const getReviewGivenByCustomer = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const bookingId = req.params.bookingId;
+
+    const result = await reviewService.getAllReviews(bookingId as string);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Review posted successfully",
+      data: result,
+    });
+  },
+);
+
 export const reviewController = {
   createReview,
+  getReviewGivenByCustomer,
 };
