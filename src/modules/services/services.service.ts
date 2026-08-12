@@ -1,6 +1,6 @@
 import { ServiceWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
-import { IService, IServiceQuery } from "./services.interface";
+import { IService, IServiceQuery, IUpdateService } from "./services.interface";
 
 const createServiceInToDB = async (payload: IService) => {
   const {
@@ -11,6 +11,7 @@ const createServiceInToDB = async (payload: IService) => {
     duration,
     technicianId,
     location,
+    imageUrl,
   } = payload;
 
   if (!technicianId) {
@@ -34,6 +35,9 @@ const createServiceInToDB = async (payload: IService) => {
   if (!location) {
     throw new Error("Location required");
   }
+  if (!imageUrl) {
+    throw new Error("Image is required");
+  }
 
   const createService = await prisma.service.create({
     data: {
@@ -44,6 +48,7 @@ const createServiceInToDB = async (payload: IService) => {
       price,
       duration,
       location,
+      imageUrl,
     },
   });
   return createService;
@@ -78,7 +83,7 @@ const getAllServicesFromDb = async (query: IServiceQuery) => {
     });
   }
 
-  if (query.category) {
+  if (query.categoryId) {
     andConditions.push({
       categoryId: query.categoryId,
     });
@@ -140,9 +145,49 @@ const getServiceByIdFromDB = async (serviceId: string) => {
   return result;
 };
 
+const updateServiceByTechnicianIntoDb = async (
+  payload: IUpdateService,
+  serviceId: string,
+  userId: string,
+) => {
+  const user = await prisma.technicianProfile.findFirst({
+    where: { userId },
+  });
+
+  const existingService = await prisma.service.findFirst({
+    where: {
+      id: serviceId,
+      technicianProfileId: user?.id,
+    },
+  });
+
+  if (!existingService) {
+    throw new Error(
+      "Service not found or you don't have permission to update it",
+    );
+  }
+
+  const { description, duration, imageUrl, location, price, serviceTitle } =
+    payload;
+
+  const result = await prisma.service.update({
+    where: { id: serviceId },
+    data: {
+      description,
+      duration,
+      imageUrl,
+      location,
+      price,
+      title: serviceTitle,
+    },
+  });
+
+  return result;
+};
 export const servicesService = {
   getAllServicesFromDb,
   createServiceInToDB,
   getAllServicesForSingleTechnicianFromDB,
   getServiceByIdFromDB,
+  updateServiceByTechnicianIntoDb,
 };

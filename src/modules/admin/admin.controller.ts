@@ -6,7 +6,7 @@ import { adminService } from "./admin.service";
 const getAllUsers = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const query = req.query;
-    console.log(query, "qury");
+
     const result = await adminService.getAllUsersFromDb(query);
     sendResponse(res, {
       success: true,
@@ -72,10 +72,25 @@ const getAllCategory = catchAsync(
   },
 );
 
+const deleteService = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+    const result = await adminService.deleteServiceFromDb(id as string);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Service Deleted successfully",
+      data: result,
+    });
+  },
+);
+
 export const adminController = {
   createCategory,
   getAllCategory,
   getAllUsers,
   updateUserStatus,
   getAllBookings,
+  deleteService,
 };

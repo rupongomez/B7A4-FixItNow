@@ -6,6 +6,17 @@ import { reviewController } from "./review.controller";
 const router = Router();
 
 router.post("/", auth(Role.CUSTOMER), reviewController.createReview);
-router.get("/:bookingId", reviewController.getReviewGivenByCustomer);
+router.get("/booking/:bookingId", reviewController.getReviewGivenByCustomer);
+router.get("/all", reviewController.getAllReviews);
+router.get(
+  "/user",
+  auth(Role.CUSTOMER),
+  reviewController.getAllReviewsByLoggedInUser,
+);
+
+router.get(
+  "/technician/:technicianId",
+  reviewController.getAllReviewsForTechnician,
+);
 
 export const reviewRouter = router;

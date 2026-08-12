@@ -60,7 +60,7 @@ const createReviewIntoDB = async (userId: string, payload: IReview) => {
   return transactionResult;
 };
 
-const getAllReviews = async (bookingId: string) => {
+const getReviewGivenOnBookingId = async (bookingId: string) => {
   const reviews = await prisma.review.findMany({
     where: {
       bookingId,
@@ -70,7 +70,46 @@ const getAllReviews = async (bookingId: string) => {
   return reviews;
 };
 
+const getAllReviewsFromDb = async () => {
+  const reviews = await prisma.review.findMany({
+    include: {
+      customer: true,
+    },
+  });
+
+  return reviews;
+};
+
+const getAllReviewsByLoggedInUserFromDb = async (id: string) => {
+  const result = await prisma.review.findMany({
+    where: { customerId: id },
+  });
+
+  return result;
+};
+
+const getAllReviewsForTechnicianFromDb = async (technicianId: string) => {
+  const result = await prisma.review.findMany({
+    where: { technicianProfileId: technicianId },
+  });
+
+  const averageRating = await prisma.technicianProfile.findFirst({
+    where: {
+      id: technicianId,
+    },
+  });
+
+  const totalReviews = await prisma.review.count({
+    where: { technicianProfileId: technicianId },
+  });
+
+  return { result, averageRating, totalReviews };
+};
+
 export const reviewService = {
   createReviewIntoDB,
-  getAllReviews,
+  getReviewGivenOnBookingId,
+  getAllReviewsFromDb,
+  getAllReviewsByLoggedInUserFromDb,
+  getAllReviewsForTechnicianFromDb,
 };

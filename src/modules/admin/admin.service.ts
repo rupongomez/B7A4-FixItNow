@@ -96,10 +96,19 @@ const getAllCategoriesFromDb = async () => {
   return allCategory;
 };
 
+const deleteServiceFromDb = async (serviceId: string) => {
+  const result = await prisma.service.delete({
+    where: { id: serviceId },
+  });
+
+  return null;
+};
+
 export const adminService = {
   getAllUsersFromDb,
   updateUserStatusIntoDb,
   getAllBookings,
   createCategoryIntoDb,
   getAllCategoriesFromDb,
+  deleteServiceFromDb,
 };

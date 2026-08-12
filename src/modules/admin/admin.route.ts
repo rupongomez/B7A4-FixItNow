@@ -10,5 +10,6 @@ router.get("/categories", adminController.getAllCategory);
 router.get("/users", auth(Role.ADMIN), adminController.getAllUsers);
 router.patch("/users/:id", auth(Role.ADMIN), adminController.updateUserStatus);
 router.get("/bookings", auth(Role.ADMIN), adminController.getAllBookings);
+router.delete("/delete/:id", auth(Role.ADMIN), adminController.deleteService);
 
 export const adminRouter = router;

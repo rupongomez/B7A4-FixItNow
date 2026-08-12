@@ -220,6 +220,22 @@ const updateBookingStatusInDb = async (bookingId: string, payload: IStatus) => {
   return transactionResult;
 };
 
+const getAllServicesForLoggedInTechnicianFromDb = async (userId: string) => {
+  const technician = await prisma.technicianProfile.findFirst({
+    where: { userId },
+  });
+
+  if (!technician) {
+    throw new Error("Technician not found");
+  }
+
+  const result = await prisma.service.findMany({
+    where: { technicianProfileId: technician.id },
+  });
+
+  return result;
+};
+
 export const technicianService = {
   createTechnicianProfileIntoDb,
   getAllTechnicianFromDb,
@@ -228,4 +244,5 @@ export const technicianService = {
   getMyTechnicianProfileFromDb,
   getTechniciansBookings,
   updateBookingStatusInDb,
+  getAllServicesForLoggedInTechnicianFromDb,
 };

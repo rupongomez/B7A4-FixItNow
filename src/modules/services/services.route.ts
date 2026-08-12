@@ -14,4 +14,10 @@ router.get(
   serviceController.getServiceById,
 );
 
+router.put(
+  "/update/:serviceId",
+  auth(Role.TECHNICIAN),
+  serviceController.updateServiceByTechnician,
+);
+
 export const serviceRouter = router;

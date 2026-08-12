@@ -58,12 +58,8 @@ const getAvailabilityById = async (id: string) => {
     throw new Error("Technician profile id is required");
   }
 
-  const getTechnicianProfileId =
-    await prisma.technicianProfile.findUniqueOrThrow({
-      where: { userId: id },
-    });
   const getAvailability = await prisma.availability.findMany({
-    where: { technicianProfileId: getTechnicianProfileId.id },
+    where: { technicianProfileId: id },
   });
 
   return getAvailability;

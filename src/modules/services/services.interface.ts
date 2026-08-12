@@ -9,6 +9,16 @@ export interface IService {
   price: number;
   duration: number;
   location: string;
+  imageUrl: string;
+}
+
+export interface IUpdateService {
+  serviceTitle: string;
+  description: string;
+  price: number;
+  duration: number;
+  location: string;
+  imageUrl: string;
 }
 
 export interface IServiceQuery extends ServiceWhereInput {

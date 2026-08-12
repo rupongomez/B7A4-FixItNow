@@ -9,6 +9,7 @@ model Service {
   price               Decimal           @db.Decimal(10, 2)
   duration            Int
   location            String
+  imageUrl            String            @db.Text
 
   booking Booking[]
 

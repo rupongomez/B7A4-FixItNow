@@ -8,7 +8,7 @@ model User {
   role              Role               @default(CUSTOMER)
   status            Status             @default(ACTIVE)
   profileImage      String?            @db.VarChar(255)
-  stripeCustomerId  String? @unique
+  stripeCustomerId  String?            @unique
   technicianProfile TechnicianProfile?
   bookings          Booking[]
   payments          Payment[]

@@ -20,6 +20,11 @@ router.get(
   auth(Role.TECHNICIAN),
   technicianController.getMyTechnicianProfile,
 );
+router.get(
+  "/services",
+  auth(Role.TECHNICIAN),
+  technicianController.getServicesForLoggedInTechnician,
+);
 
 router.put(
   "/update-profile",

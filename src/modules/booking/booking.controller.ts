@@ -54,7 +54,7 @@ const updateBookingStatus = catchAsync(
     const customerId = req.user?.id as string;
     const bookingId = req.params.bookingId as string;
     const status = req.body.status;
-    console.log(status, "from contr");
+
     const result = await bookingService.updateBookingStatusInDb(
       bookingId,
       status,

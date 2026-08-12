@@ -9,3 +9,11 @@ export interface RegisterUserPayload {
   profileImage?: string;
   role: Role;
 }
+
+export interface IGoogleUser {
+  id: string;
+  email: string;
+  verified_email: boolean;
+  name: string;
+  picture: string;
+}

@@ -60,9 +60,31 @@ const getServiceById = catchAsync(
   },
 );
 
+const updateServiceByTechnician = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const payload = req.body;
+    const serviceId = req.params.serviceId;
+    const userId = req.user?.id;
+
+    const result = await servicesService.updateServiceByTechnicianIntoDb(
+      payload,
+      serviceId as string,
+      userId as string,
+    );
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Service Updated successfully",
+      data: result,
+    });
+  },
+);
+
 export const serviceController = {
   getAllServices,
   createService,
   getAllServicesForSingleTechnician,
   getServiceById,
+  updateServiceByTechnician,
 };

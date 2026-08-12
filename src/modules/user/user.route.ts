@@ -12,5 +12,11 @@ router.get(
   auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
   userController.getMyProfile,
 );
+router.put(
+  "/update",
+  auth(Role.ADMIN, Role.CUSTOMER, Role.TECHNICIAN),
+  userController.updateUser,
+);
+router.post("/google", userController.googleLogin);
 
 export const userRouter = router;
