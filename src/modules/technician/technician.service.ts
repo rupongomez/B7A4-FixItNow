@@ -192,6 +192,7 @@ const updateBookingStatusInDb = async (bookingId: string, payload: IStatus) => {
     if (
       status !== "ACCEPTED" &&
       status !== "DECLINED" &&
+      status !== "IN_PROGRESS" &&
       status !== "COMPLETED"
     ) {
       throw new Error(

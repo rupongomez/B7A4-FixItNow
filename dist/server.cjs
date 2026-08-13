@@ -917,7 +917,7 @@ var getTechniciansBookings = async (userId) => {
 var updateBookingStatusInDb = async (bookingId, payload) => {
   const transactionResult = await prisma.$transaction(async (tx) => {
     const status = payload.status.toUpperCase();
-    if (status !== "ACCEPTED" && status !== "DECLINED" && status !== "COMPLETED") {
+    if (status !== "ACCEPTED" && status !== "DECLINED" && status !== "IN_PROGRESS" && status !== "COMPLETED") {
       throw new Error(
         "Status type not allowed. Please select accept or decline"
       );
@@ -1404,12 +1404,6 @@ var createAvailabilityIntoDb = async (payload, userId) => {
         userId
       }
     });
-    const isAvailabilityExist = await tx.availability.findFirst({
-      where: { technicianProfileId: getTechnicianProfile.id }
-    });
-    if (isAvailabilityExist) {
-      throw new Error("You have already set your available slots");
-    }
     const createAvailability2 = await tx.availability.create({
       data: {
         technicianProfileId: getTechnicianProfile.id,
@@ -1776,11 +1770,26 @@ var getAllReviewsByLoggedInUserFromDb = async (id) => {
   });
   return result;
 };
+var getAllReviewsForTechnicianFromDb = async (technicianId) => {
+  const result = await prisma.review.findMany({
+    where: { technicianProfileId: technicianId }
+  });
+  const averageRating = await prisma.technicianProfile.findFirst({
+    where: {
+      id: technicianId
+    }
+  });
+  const totalReviews = await prisma.review.count({
+    where: { technicianProfileId: technicianId }
+  });
+  return { result, averageRating, totalReviews };
+};
 var reviewService = {
   createReviewIntoDB,
   getReviewGivenOnBookingId,
   getAllReviewsFromDb,
-  getAllReviewsByLoggedInUserFromDb
+  getAllReviewsByLoggedInUserFromDb,
+  getAllReviewsForTechnicianFromDb
 };
 
 // src/modules/reviews/review.controller.ts
@@ -1834,11 +1843,24 @@ var getAllReviewsByLoggedInUser = async (req, res, next) => {
     data: result
   });
 };
+var getAllReviewsForTechnician = async (req, res, next) => {
+  const technicianId = req.params.technicianId;
+  const result = await reviewService.getAllReviewsForTechnicianFromDb(
+    technicianId
+  );
+  sendResponse(res, {
+    success: true,
+    statusCode: import_http_status9.default.OK,
+    message: "All Reviews retrieved successfully",
+    data: result
+  });
+};
 var reviewController = {
   createReview,
   getReviewGivenByCustomer,
   getAllReviews,
-  getAllReviewsByLoggedInUser
+  getAllReviewsByLoggedInUser,
+  getAllReviewsForTechnician
 };
 
 // src/modules/reviews/review.route.ts
@@ -1850,6 +1872,10 @@ router7.get(
   "/user",
   auth(Role.CUSTOMER),
   reviewController.getAllReviewsByLoggedInUser
+);
+router7.get(
+  "/technician/:technicianId",
+  reviewController.getAllReviewsForTechnician
 );
 var reviewRouter = router7;
 

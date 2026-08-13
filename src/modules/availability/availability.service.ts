@@ -13,13 +13,13 @@ const createAvailabilityIntoDb = async (
       },
     });
 
-    const isAvailabilityExist = await tx.availability.findFirst({
-      where: { technicianProfileId: getTechnicianProfile.id },
-    });
+    // const isAvailabilityExist = await tx.availability.findFirst({
+    //   where: { technicianProfileId: getTechnicianProfile.id },
+    // });
 
-    if (isAvailabilityExist) {
-      throw new Error("You have already set your available slots");
-    }
+    // if (isAvailabilityExist) {
+    //   throw new Error("You have already set your available slots");
+    // }
 
     const createAvailability = await tx.availability.create({
       data: {
